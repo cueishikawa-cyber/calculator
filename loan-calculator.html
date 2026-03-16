@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="ローン計算" />
+  <title>ローン計算機</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #f0f0f0;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      padding: env(safe-area-inset-top, 16px) 20px 40px;
+      padding-top: max(env(safe-area-inset-top), 16px);
+    }
+
+    .header { margin-bottom: 12px; }
+    .header .sub {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #999;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: #f0f0f0;
+    }
+
+    .field { margin-bottom: 10px; }
+    .field label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .field .input-row {
+      display: flex;
+      align-items: baseline;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+    }
+    .field input {
+      flex: 1;
+      background: none;
+      border: none;
+      outline: none;
+      font-size: 22px;
+      font-family: 'DM Mono', monospace;
+      color: #f0f0f0;
+      letter-spacing: -0.02em;
+      width: 100%;
+      -webkit-appearance: none;
+    }
+    .field input::placeholder { color: #333; }
+    .field .unit {
+      font-size: 11px;
+      color: #555;
+      margin-left: 6px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      margin-bottom: 24px;
+    }
+    .btn-calc {
+      flex: 1;
+      padding: 12px;
+      background: #f0f0f0;
+      color: #0a0a0a;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+      border-radius: 2px;
+    }
+    .btn-calc:active { opacity: 0.75; }
+
+    .btn-reset {
+      padding: 12px 16px;
+      background: none;
+      color: #555;
+      border: 1px solid #222;
+      cursor: pointer;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      font-family: 'DM Sans', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      border-radius: 2px;
+    }
+    .btn-reset:active { opacity: 0.6; }
+
+    .error {
+      font-size: 11px;
+      color: #c0392b;
+      letter-spacing: 0.08em;
+      margin-top: -16px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Summary Results ── */
+    .results {
+      border-top: 1px solid #222;
+      padding-top: 20px;
+      animation: fadeUp 0.4s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-label {
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 10px 0;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    .result-row .r-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #666;
+      text-transform: uppercase;
+    }
+    .result-row .r-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 15px;
+      color: #aaa;
+      letter-spacing: -0.01em;
+    }
+    .result-row.highlight .r-value {
+      font-size: 20px;
+      color: #f0f0f0;
+    }
+
+    .totals { padding-top: 12px; margin-bottom: 32px; }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+    }
+    .total-row .t-label {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #444;
+      text-transform: uppercase;
+    }
+    .total-row .t-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: #555;
+    }
+
+    /* ── Amortization Table ── */
+    .table-section {
+      border-top: 1px solid #222;
+      padding-top: 20px;
+    }
+
+    .amort-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    .amort-table thead tr {
+      border-bottom: 1px solid #222;
+    }
+    .amort-table th {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #444;
+      text-transform: uppercase;
+      font-weight: 400;
+      padding: 8px 4px 10px;
+      text-align: right;
+    }
+    .amort-table th:first-child { text-align: left; }
+
+    .amort-table tbody tr {
+      border-bottom: 1px solid #161616;
+      transition: background 0.15s;
+    }
+    .amort-table tbody tr:last-child { border-bottom: none; }
+    .amort-table tbody tr:active { background: #111; }
+
+    .amort-table td {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: #666;
+      padding: 13px 4px;
+      text-align: right;
+      letter-spacing: -0.01em;
+    }
+    .amort-table td:first-child {
+      text-align: left;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: #888;
+      letter-spacing: 0;
+    }
+    .amort-table td.balance {
+      color: #f0f0f0;
+      font-weight: 500;
+    }
+
+    /* ── Toggle ── */
+    .toggle-field { margin-bottom: 10px; }
+    .toggle-field label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+    }
+    .toggle-wrap {
+      display: flex;
+      border: 1px solid #2a2a2a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .toggle-btn {
+      flex: 1;
+      padding: 8px 8px;
+      background: none;
+      border: none;
+      color: #555;
+      font-size: 12px;
+      font-family: 'DM Sans', sans-serif;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toggle-btn.active {
+      background: #f0f0f0;
+      color: #0a0a0a;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="sub">Loan Calculator</div>
+    <h1>ローン<br>計算機</h1>
+  </div>
+
+  <div class="field">
+    <label>融資金額</label>
+    <div class="input-row">
+      <input type="number" id="amount" inputmode="decimal" placeholder="3000" />
+      <span class="unit">万円</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>融資年数</label>
+    <div class="input-row">
+      <input type="number" id="years" inputmode="decimal" placeholder="35" />
+      <span class="unit">年</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>年利</label>
+    <div class="input-row">
+      <input type="number" id="rate" inputmode="decimal" placeholder="1.5" />
+      <span class="unit">%</span>
+    </div>
+  </div>
+
+  <div class="field">
+    <label>家賃収入</label>
+    <div class="input-row">
+      <input type="number" id="rent" inputmode="decimal" placeholder="180" />
+      <span class="unit">万円 / 年</span>
+    </div>
+  </div>
+
+  <div class="toggle-field">
+    <label>返済方式</label>
+    <div class="toggle-wrap">
+      <button class="toggle-btn active" id="btnEqual" onclick="setMethod('equal')">元利均等</button>
+      <button class="toggle-btn" id="btnPrincipal" onclick="setMethod('principal')">元金均等</button>
+    </div>
+  </div>
+
+  <div class="buttons">
+    <button class="btn-calc" onclick="calculate()">計算する</button>
+    <button class="btn-reset" onclick="reset()">リセット</button>
+  </div>
+
+  <p class="error" id="error" style="display:none">すべての項目を正しく入力してください。</p>
+
+  <div class="results" id="results" style="display:none">
+    <div class="section-label">Results</div>
+
+    <div class="result-row">
+      <span class="r-label">初月　元金</span>
+      <span class="r-value" id="monthlyPrincipal">—</span>
+    </div>
+    <div class="result-row">
+      <span class="r-label">初月　利息</span>
+      <span class="r-value" id="monthlyInterest">—</span>
+    </div>
+    <div class="result-row highlight">
+      <span class="r-label">初月　返済額</span>
+      <span class="r-value" id="monthlyPayment">—</span>
+    </div>
+    <div class="result-row">
+      <span class="r-label" id="yearlyLabel">年額　返済額</span>
+      <span class="r-value" id="yearlyPayment">—</span>
+    </div>
+    <div class="result-row" id="ratioRow" style="display:none">
+      <span class="r-label">返済比率</span>
+      <span class="r-value" id="repayRatio">—</span>
+    </div>
+
+    <div class="totals">
+      <div class="total-row">
+        <span class="t-label">総返済額</span>
+        <span class="t-value" id="totalPayment">—</span>
+      </div>
+      <div class="total-row">
+        <span class="t-label">利息合計</span>
+        <span class="t-value" id="totalInterest">—</span>
+      </div>
+    </div>
+
+    <!-- Amortization Table -->
+    <div class="table-section">
+      <div class="section-label">年次返済内訳</div>
+      <table class="amort-table">
+        <thead>
+          <tr>
+            <th>経過年</th>
+            <th>年間元金</th>
+            <th>年間利息</th>
+            <th>残債</th>
+          </tr>
+        </thead>
+        <tbody id="amortBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let method = 'equal'; // 'equal' = 元利均等, 'principal' = 元金均等
+
+    function setMethod(m) {
+      method = m;
+      document.getElementById('btnEqual').classList.toggle('active', m === 'equal');
+      document.getElementById('btnPrincipal').classList.toggle('active', m === 'principal');
+    }
+
+    function fmt(num) {
+      return new Intl.NumberFormat('ja-JP', {
+        style: 'currency', currency: 'JPY', maximumFractionDigits: 0
+      }).format(Math.round(num));
+    }
+
+    function calculate() {
+      const manEn = parseFloat(document.getElementById('amount').value);
+      const yrs = parseFloat(document.getElementById('years').value);
+      const annualRate = parseFloat(document.getElementById('rate').value);
+      const rentMan = parseFloat(document.getElementById('rent').value);
+      const errorEl = document.getElementById('error');
+      const resultsEl = document.getElementById('results');
+
+      if (!manEn || !yrs || isNaN(annualRate) || manEn <= 0 || yrs <= 0 || annualRate < 0) {
+        errorEl.style.display = 'block';
+        resultsEl.style.display = 'none';
+        return;
+      }
+      errorEl.style.display = 'none';
+
+      const P = manEn * 10000;
+      const n = Math.round(yrs * 12);
+      const r = annualRate / 100 / 12;
+
+      const tbody = document.getElementById('amortBody');
+      tbody.innerHTML = '';
+
+      if (method === 'equal') {
+        // 元利均等
+        const monthly = r === 0 ? P / n : (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        const monthlyInterest = P * r;
+        const monthlyPrincipal = monthly - monthlyInterest;
+        const yearly = monthly * 12;
+        const total = monthly * n;
+        const totalInt = total - P;
+
+        document.getElementById('monthlyPrincipal').textContent = fmt(monthlyPrincipal);
+        document.getElementById('monthlyInterest').textContent = fmt(monthlyInterest);
+        document.getElementById('monthlyPayment').textContent = fmt(monthly);
+        document.getElementById('yearlyLabel').textContent = '年額　返済額';
+        document.getElementById('yearlyPayment').textContent = fmt(yearly);
+        document.getElementById('totalPayment').textContent = fmt(total);
+        document.getElementById('totalInterest').textContent = fmt(totalInt);
+
+        // 返済比率
+        const ratioRow = document.getElementById('ratioRow');
+        if (rentMan && rentMan > 0) {
+          const monthlyRent = (rentMan * 10000) / 12;
+          const ratio = (monthly / monthlyRent) * 100;
+          const ratioEl = document.getElementById('repayRatio');
+          ratioEl.textContent = ratio.toFixed(1) + '%';
+          ratioEl.style.color = ratio < 50 ? '#6fcf97' : ratio < 65 ? '#f2c94c' : '#eb5757';
+          ratioRow.style.display = 'flex';
+        } else {
+          ratioRow.style.display = 'none';
+        }
+
+        // 年次テーブル（元利均等）
+        let balance = P;
+        for (let y = 1; y <= yrs; y++) {
+          let yearPrincipal = 0, yearInterest = 0;
+          for (let m = 0; m < 12; m++) {
+            if (balance <= 0) break;
+            const intPart = balance * r;
+            const prinPart = Math.min(monthly - intPart, balance);
+            yearInterest += intPart;
+            yearPrincipal += prinPart;
+            balance -= prinPart;
+          }
+          if (balance < 0) balance = 0;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${y}年後</td><td>${fmt(yearPrincipal)}</td><td>${fmt(yearInterest)}</td><td class="balance">${fmt(balance)}</td>`;
+          tbody.appendChild(tr);
+        }
+
+      } else {
+        // 元金均等
+        const fixedPrincipal = P / n;
+        const firstInterest = P * r;
+        const firstMonthly = fixedPrincipal + firstInterest;
+        const firstYearly = firstMonthly * 12; // 概算（初年度）
+        const total = P + (P * r * (n + 1) / 2);
+        const totalInt = total - P;
+
+        document.getElementById('monthlyPrincipal').textContent = fmt(fixedPrincipal);
+        document.getElementById('monthlyInterest').textContent = fmt(firstInterest) + '〜';
+        document.getElementById('monthlyPayment').textContent = fmt(firstMonthly) + '〜';
+        document.getElementById('yearlyLabel').textContent = '初年度　返済額';
+        document.getElementById('yearlyPayment').textContent = fmt(firstYearly);
+        document.getElementById('totalPayment').textContent = fmt(total);
+        document.getElementById('totalInterest').textContent = fmt(totalInt);
+
+        // 返済比率（初月ベース）
+        const ratioRow = document.getElementById('ratioRow');
+        if (rentMan && rentMan > 0) {
+          const monthlyRent = (rentMan * 10000) / 12;
+          const ratio = (firstMonthly / monthlyRent) * 100;
+          const ratioEl = document.getElementById('repayRatio');
+          ratioEl.textContent = ratio.toFixed(1) + '%（初月）';
+          ratioEl.style.color = ratio < 50 ? '#6fcf97' : ratio < 65 ? '#f2c94c' : '#eb5757';
+          ratioRow.style.display = 'flex';
+        } else {
+          ratioRow.style.display = 'none';
+        }
+
+        // 年次テーブル（元金均等）
+        let balance = P;
+        for (let y = 1; y <= yrs; y++) {
+          let yearPrincipal = 0, yearInterest = 0;
+          for (let m = 0; m < 12; m++) {
+            if (balance <= 0) break;
+            const intPart = balance * r;
+            yearInterest += intPart;
+            yearPrincipal += fixedPrincipal;
+            balance -= fixedPrincipal;
+          }
+          if (balance < 0) balance = 0;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td>${y}年後</td><td>${fmt(yearPrincipal)}</td><td>${fmt(yearInterest)}</td><td class="balance">${fmt(balance)}</td>`;
+          tbody.appendChild(tr);
+        }
+      }
+
+      resultsEl.style.display = 'block';
+      resultsEl.style.animation = 'none';
+      void resultsEl.offsetWidth;
+      resultsEl.style.animation = 'fadeUp 0.4s ease';
+      setTimeout(() => resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+
+    function reset() {
+      document.getElementById('amount').value = '';
+      document.getElementById('years').value = '';
+      document.getElementById('rate').value = '';
+      document.getElementById('rent').value = '';
+      document.getElementById('results').style.display = 'none';
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('amortBody').innerHTML = '';
+      document.getElementById('ratioRow').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
